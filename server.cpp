@@ -86,7 +86,6 @@ void Server::handle_client_communication(int connection_fd) {
     if (bytes_received < 0) {
       throw Error("Failed to receive data");
     } else if (bytes_received == 0) {
-      std::cout << "Client disconnected" << std::endl;
       break;
     }
     recv_buffer[bytes_received] = '\0'; // Null-terminate the received data
@@ -113,7 +112,17 @@ void Server::handle_client_communication(int connection_fd) {
 }
 
 std::string Server::receive(std::string data) {
-  return "";
+  std::cout << "<-:" << data << std::endl;
+  std::string reply;
+
+  if (data == "?") {
+    reply = "S05";
+  } else {
+    reply = "";
+  }
+
+  std::cout << "->:" << reply << std::endl;
+  return reply;
 }
 
 } // namespace gsk
