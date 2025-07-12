@@ -18,10 +18,17 @@ public:
 class Server {
   int socket_fd = -1;
 
+  void setup_socket(const std::string& address, int port);
+  bool validate_packet(const std::string& packet, std::string& data);
+  void handle_client_communication(int connection_fd);
+
 public:
   ~Server();
 
   void start(std::string address, int port);
+
+protected:
+  virtual std::string receive(std::string data);
 };
 
 }
