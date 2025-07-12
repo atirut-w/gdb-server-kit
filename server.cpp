@@ -1,5 +1,6 @@
 #include "gdb-server-kit/server.hpp"
 #include <arpa/inet.h>
+#include <cstdio>
 #include <cstdlib>
 #include <iostream>
 #include <netinet/in.h>
@@ -97,13 +98,22 @@ void Server::handle_client_communication(int connection_fd) {
       continue;
     }
 
-    std::string response = receive(data);
+    std::string reply = receive(data);
+    unsigned int checksum = 0;
+    for (char c : reply) {
+      checksum += static_cast<unsigned char>(c);
+    }
+    checksum %= 256;
+    char checksum_hex[3];
+    snprintf(checksum_hex, sizeof(checksum_hex), "%02x", checksum);
+    std::string response = "+$" + reply + "#" + checksum_hex;
+
     send(connection_fd, response.c_str(), response.size(), 0);
   }
 }
 
 std::string Server::receive(std::string data) {
-  return "+$#00";
+  return "";
 }
 
 } // namespace gsk
