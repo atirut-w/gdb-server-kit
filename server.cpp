@@ -47,7 +47,7 @@ void Server::setup_socket(const std::string& address, int port) {
   }
 }
 
-bool Server::validate_packet(const std::string& packet, std::string& data) {
+bool Server::decode_packet(const std::string& packet, std::string& data) {
   if (packet[0] != '$') {
     return false;
   }
@@ -78,6 +78,19 @@ bool Server::validate_packet(const std::string& packet, std::string& data) {
   return checksum == received_checksum;
 }
 
+std::string Server::encode_packet(const std::string& data) {
+  unsigned int checksum = 0;
+  for (char c : data) {
+    checksum += static_cast<unsigned char>(c);
+  }
+  checksum %= 256;
+
+  char checksum_hex[3];
+  snprintf(checksum_hex, sizeof(checksum_hex), "%02x", checksum);
+  
+  return "+$" + data + "#" + checksum_hex;
+}
+
 void Server::handle_client_communication(int connection_fd) {
   while (true) {
     std::string packet;
@@ -92,33 +105,24 @@ void Server::handle_client_communication(int connection_fd) {
     packet.append(recv_buffer, bytes_received);
 
     std::string data;
-    if (!validate_packet(packet, data)) {
+    if (!decode_packet(packet, data)) {
       send(connection_fd, "-", 1, 0); // Request retransmission
       continue;
     }
 
-    std::string reply = receive(data);
-    unsigned int checksum = 0;
-    for (char c : reply) {
-      checksum += static_cast<unsigned char>(c);
-    }
-    checksum %= 256;
-    char checksum_hex[3];
-    snprintf(checksum_hex, sizeof(checksum_hex), "%02x", checksum);
-    std::string response = "+$" + reply + "#" + checksum_hex;
-
-    send(connection_fd, response.c_str(), response.size(), 0);
+    std::string reply = encode_packet(handle(data));
+    send(connection_fd, reply.c_str(), reply.size(), 0);
   }
 }
 
-std::string Server::receive(std::string data) {
+std::string Server::handle(const std::string &data) {
   std::cout << "<-:" << data << std::endl;
   std::string reply;
 
   if (data == "?") {
-    reply = "S05";
+    reply = "S05"; // TODO: Reply with actual stop reason
   } else {
-    reply = "";
+    reply = ""; // Command not recognized
   }
 
   std::cout << "->:" << reply << std::endl;
